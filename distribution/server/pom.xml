@@ -252,6 +252,11 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.zhaopin</groupId>
+      <artifactId>zhaopinlayout</artifactId>
+      <version>0.0.2</version>
+    </dependency>
   </dependencies>
 
   <build>

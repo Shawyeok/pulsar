@@ -50,7 +50,7 @@ BINDIR=`dirname "$0"`
 BK_HOME=`cd -P $BINDIR/..;pwd`
 
 DEFAULT_CONF=$BK_HOME/conf/bookkeper.conf
-DEFAULT_LOG_CONF=$BK_HOME/conf/log4j2.yaml
+DEFAULT_LOG_CONF=$BK_HOME/conf/log4j2.xml
 
 source $BK_HOME/conf/bkenv.sh
 
@@ -148,7 +148,7 @@ COMMAND=$1
 shift
 
 if [ $COMMAND == "shell" ]; then
-    DEFAULT_LOG_CONF=$BK_HOME/conf/log4j2.yaml
+    DEFAULT_LOG_CONF=$BK_HOME/conf/log4j2.xml
 fi
 
 if [ -z "$BOOKIE_CONF" ]; then

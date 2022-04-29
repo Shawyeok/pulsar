@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn" strict="true" packages="io.prometheus.client.log4j2">
+    <Properties>
+        <property name="pulsar.log.dir">logs</property>
+        <property name="pulsar.log.file">pulsar.log</property>
+        <property name="pulsar.log.level">INFO</property>
+        <property name="pulsar.log.root.level">INFO</property>
+        <property name="pulsar.log.appender">RollingFile</property>
+    </Properties>
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{ISO8601} [%t] %level %logger{36} - %msg%n"/>
+        </Console>
+        <Appender type="RollingFile" name="RollingFile" fileName="${sys:pulsar.log.dir}/${sys:pulsar.log.file}"
+                  append="true" filePattern="${sys:pulsar.log.dir}/${sys:pulsar.log.file}-%i.log">
+            <Layout type="ZhaopinLayout"/>
+            <Policies>
+                <OnStartupTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="500MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </Appender>
+        <Prometheus name="Prometheus" />
+    </Appenders>
+    <Loggers>
+        <Root level="${sys:pulsar.log.root.level}">
+            <AppenderRef ref="${sys:pulsar.log.appender}"/>
+            <AppenderRef ref="Prometheus" />
+        </Root>
+    </Loggers>
+</Configuration>
