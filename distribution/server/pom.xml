@@ -302,6 +302,13 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
     </dependency>
+
+    <!-- Zhaopin Layout -->
+    <dependency>
+      <groupId>com.zhaopin</groupId>
+      <artifactId>zhaopinlayout-log4j2</artifactId>
+      <version>0.0.7</version>
+    </dependency>
   </dependencies>
 
   <build>
