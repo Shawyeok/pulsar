@@ -48,6 +48,7 @@ import javax.ws.rs.core.Response;
 import org.apache.bookkeeper.mledger.Position;
 import org.apache.bookkeeper.mledger.impl.PositionImpl;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pulsar.broker.admin.AdminResource;
 import org.apache.pulsar.broker.admin.impl.PersistentTopicsBase;
 import org.apache.pulsar.broker.service.BrokerServiceException;
@@ -4830,6 +4831,71 @@ public class PersistentTopics extends PersistentTopicsBase {
                 .thenRun(() -> asyncResponse.resume(Response.noContent().build()))
                 .exceptionally(ex -> {
                     handleTopicPolicyException("deleteShadowTopic", ex, asyncResponse);
+                    return null;
+                });
+    }
+
+    @GET
+    @Path("/{tenant}/{namespace}/{topic}/subscription/{subName}/hasColoredConsumer")
+    @ApiOperation(value = "Whether a subscription has a colored consumer")
+    public void hasColoredConsumer(
+            @Suspended final AsyncResponse asyncResponse,
+            @ApiParam(value = "Specify the tenant", required = true)
+            @PathParam("tenant") String tenant,
+            @ApiParam(value = "Specify the namespace", required = true)
+            @PathParam("namespace") String namespace,
+            @ApiParam(value = "Specify topic name", required = true)
+            @PathParam("topic") @Encoded String encodedTopic,
+            @ApiParam(value = "Name of subscription", required = true)
+            @PathParam("subName") String encodedSubName,
+            @ApiParam(value = "Is authentication required to perform this operation")
+            @QueryParam("authoritative") @DefaultValue("false") boolean authoritative,
+            @ApiParam(value = "Color of consume", required = true)
+            @QueryParam("color") String encodedColor) {
+        validateTopicName(tenant, namespace, encodedTopic);
+        if (StringUtils.isBlank(encodedColor)) {
+            throw new RestException(Response.Status.BAD_REQUEST, "Query param color is required");
+        }
+        internalGetSubscriptionConsumers(authoritative, decode(encodedSubName))
+                .thenApply(consumers -> {
+                    String color = decode(encodedColor);
+                    boolean hasMatched = consumers.stream().anyMatch(c ->
+                            color.equals(c.getStats().getMetadata().get("color")));
+                    asyncResponse.resume(Response.ok(hasMatched).build());
+                    return hasMatched;
+                })
+                .exceptionally(ex -> {
+                    handleTopicPolicyException("hasColoredConsumer", ex, asyncResponse);
+                    return null;
+                });
+    }
+
+    @GET
+    @Path("/{tenant}/{namespace}/{topic}/subscription/{subName}/hasNonColoredConsumer")
+    @ApiOperation(value = "Whether a subscription has a non colored consumer")
+    public void hasNonColoredConsumer(
+            @Suspended final AsyncResponse asyncResponse,
+            @ApiParam(value = "Specify the tenant", required = true)
+            @PathParam("tenant") String tenant,
+            @ApiParam(value = "Specify the namespace", required = true)
+            @PathParam("namespace") String namespace,
+            @ApiParam(value = "Specify topic name", required = true)
+            @PathParam("topic") @Encoded String encodedTopic,
+            @ApiParam(value = "Name of subscription", required = true)
+            @PathParam("subName") String encodedSubName,
+            @ApiParam(value = "Is authentication required to perform this operation")
+            @QueryParam("authoritative") @DefaultValue("false") boolean authoritative) {
+        validateTopicName(tenant, namespace, encodedTopic);
+        internalGetSubscriptionConsumers(authoritative, decode(encodedSubName))
+                .thenAccept(consumers -> {
+                    boolean hasMatched = consumers.stream().anyMatch(c -> {
+                        Map<String, String> metadata = c.getStats().getMetadata();
+                        return "".equals(metadata.getOrDefault("color", ""));
+                    });
+                    asyncResponse.resume(Response.ok(hasMatched).build());
+                })
+                .exceptionally(ex -> {
+                    handleTopicPolicyException("hasNonColoredConsumer", ex, asyncResponse);
                     return null;
                 });
     }
