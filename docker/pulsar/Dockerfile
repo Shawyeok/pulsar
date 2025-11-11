@@ -18,7 +18,7 @@
 #
 
 # First create a stage with just the Pulsar tarball and scripts
-FROM busybox as pulsar
+FROM repo.zhaopin.com/library/busybox as pulsar
 
 ARG PULSAR_TARBALL
 
@@ -53,7 +53,7 @@ RUN chmod g+w /pulsar/trino
 ### Create 2nd stage from Ubuntu image
 ### and add OpenJDK and Python dependencies (for Pulsar functions)
 
-FROM ubuntu:22.04
+FROM repo.zhaopin.com/library/ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEFAULT_USERNAME=pulsar
