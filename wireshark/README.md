@@ -19,34 +19,73 @@
 
 -->
 
-> **Note**: This Lua script may cause a crash in the newest version of Wireshark, see [#18439](https://github.com/apache/pulsar/issues/18439). Make sure the version of Wireshark is earlier than v4.0.0.
+# Pulsar Wireshark Dissector
 
-# How to use 
+A Lua plugin for Wireshark that dissects the Apache Pulsar binary protocol.
 
-## Step 1: prepare PulsarApi.proto file
-You need to put PulsarApi.proto to a separate path.
+## Requirements
 
-1. Open your Wireshark.
+- Wireshark 3.x or 4.x (tested on 4.x)
+- The Protobuf dissector must be enabled in Wireshark (it is by default)
 
-2. Go to **Edit > Preferences > Protocols > ProtoBuf > Protobuf**, and then search paths.
+## Step 1: Register PulsarApi.proto
 
-3. Add the path of PulsarApi.proto.
+The plugin delegates Protobuf decoding to Wireshark's built-in Protobuf dissector,
+so Wireshark needs to know where `PulsarApi.proto` is.
 
-4. Check `Dissect Protobuf fields as Wireshark fields` box. When this box is checked, 
-you can use `pbf.pulsar.proto` to visit fields in protobuf package.  
+1. Copy `pulsar-common/src/main/proto/PulsarApi.proto` to a directory of your choice.
 
-## Step 2: add pulsar.lua to plugins
+2. Open Wireshark → **Edit > Preferences > Protocols > Protobuf > Protobuf search paths**.
 
-1. Open Wireshark.
+3. Add the directory containing `PulsarApi.proto`.
 
-2. Go to **About Wireshark > Folders > Personal Lua Plugins > Plugin Path**.
+4. Check **Dissect Protobuf fields as Wireshark fields**.
+   This enables the `pbf.pulsar.proto.*` display filter namespace.
 
-3. Add pulsar.lua to this path.
+## Step 2: Install pulsar.lua
 
-## Step 3: start to use
+1. Open Wireshark → **Help > About Wireshark > Folders** and note the
+   **Personal Lua Plugins** path (e.g. `~/.local/lib/wireshark/plugins/`).
 
-This plugin registers a Pulsar protocol automatically in 6650. You can use this Wireshark filter string to find out Pulsar packages (ignore ping/pong):
+2. Copy `pulsar.lua` to that directory.
+
+3. Reload Lua plugins: **Analyze > Reload Lua Plugins** (or restart Wireshark).
+
+## Step 3: Capture and filter
+
+The dissector registers on TCP port **6650** by default. To change the port,
+go to **Edit > Preferences > Protocols > Pulsar**.
+
+Useful display filter to show all Pulsar traffic except keep-alive ping/pong:
 
 ```
 tcp.port eq 6650 and pulsar and pbf.pulsar.proto.BaseCommand.type ne "ping" and pbf.pulsar.proto.BaseCommand.type ne "pong"
 ```
+
+Filter by a specific command type:
+
+```
+pbf.pulsar.proto.BaseCommand.type eq "send"
+pbf.pulsar.proto.BaseCommand.type eq "message"
+pbf.pulsar.proto.BaseCommand.type eq "connect"
+```
+
+## What the dissector shows
+
+Each Pulsar frame is broken down into:
+
+| Field | Description |
+|---|---|
+| `pulsar.total_size` | Frame length (excludes the 4-byte length prefix itself) |
+| `pulsar.cmd_size` | Size of the serialized `BaseCommand` protobuf |
+| `pulsar.cmd` | `BaseCommand` protobuf (decoded by the Protobuf dissector) |
+| `pulsar.magic` | Magic bytes: `0x0e01` = CRC32C checksum follows, `0x0e02` = broker entry metadata follows |
+| `pulsar.checksum` | CRC32C checksum over metadata + payload |
+| `pulsar.broker_meta_size` | Size of the `BrokerEntryMetadata` protobuf (protocol v16+) |
+| `pulsar.broker_meta` | `BrokerEntryMetadata` protobuf |
+| `pulsar.metadata_size` | Size of the `MessageMetadata` protobuf |
+| `pulsar.metadata` | `MessageMetadata` protobuf |
+| `pulsar.payload` | Raw message payload bytes |
+
+The **Info** column in the packet list shows the command type name
+(e.g. `SEND`, `MESSAGE`, `CONNECT`, `ACK`, …).
