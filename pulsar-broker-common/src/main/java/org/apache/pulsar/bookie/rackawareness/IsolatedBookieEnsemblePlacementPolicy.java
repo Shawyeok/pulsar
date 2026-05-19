@@ -163,7 +163,7 @@ public class IsolatedBookieEnsemblePlacementPolicy extends RackawareEnsemblePlac
 
     private static Pair<Set<String>, Set<String>> getIsolationGroup(
             EnsemblePlacementPolicyConfig ensemblePlacementPolicyConfig) {
-        MutablePair<Set<String>, Set<String>> pair = new MutablePair<>();
+        MutablePair<Set<String>, Set<String>> pair = new MutablePair<>(Collections.emptySet(), Collections.emptySet());
         String className = IsolatedBookieEnsemblePlacementPolicy.class.getName();
         if (ensemblePlacementPolicyConfig.getPolicyClass().getName().equals(className)) {
             Map<String, Object> properties = ensemblePlacementPolicyConfig.getProperties();
@@ -173,13 +173,9 @@ public class IsolatedBookieEnsemblePlacementPolicy extends RackawareEnsemblePlac
                     .castToString(properties.getOrDefault(SECONDARY_ISOLATION_BOOKIE_GROUPS, ""));
             if (!primaryIsolationGroupString.isEmpty()) {
                 pair.setLeft(new HashSet<>(Arrays.asList(primaryIsolationGroupString.split(","))));
-            } else {
-                pair.setLeft(Collections.emptySet());
             }
             if (!secondaryIsolationGroupString.isEmpty()) {
                 pair.setRight(new HashSet<>(Arrays.asList(secondaryIsolationGroupString.split(","))));
-            } else {
-                pair.setRight(Collections.emptySet());
             }
         }
         return pair;
