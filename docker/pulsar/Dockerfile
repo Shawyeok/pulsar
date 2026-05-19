@@ -33,6 +33,7 @@ COPY scripts/generate-zookeeper-config.sh /pulsar/bin
 COPY scripts/pulsar-zookeeper-ruok.sh /pulsar/bin
 COPY scripts/watch-znode.py /pulsar/bin
 COPY scripts/install-pulsar-client.sh /pulsar/bin
+COPY scripts/update-rocksdb-conf-from-env.py /pulsar/bin
 
 # The final image needs to give the root group sufficient permission for Pulsar components
 # to write to specific directories within /pulsar
