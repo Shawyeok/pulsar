@@ -972,13 +972,13 @@ public abstract class AbstractTopic implements Topic, TopicPolicyListener {
                                                            CompletableFuture<Optional<Long>>> handle) -> {
                         log.info().attr("key", handle.getKey()).log("Failing waiting producer");
                         handle.getValue().completeExceptionally(new ProducerFencedException("Fenced out"));
-                        handle.getKey().close(true);
+                        handle.getKey().close();
                     });
                     producers.forEach((k, currentProducer) -> {
                         log.info()
                                 .attr("currentProducer", currentProducer)
                                 .log("Fencing out producer");
-                        currentProducer.close(true);
+                        currentProducer.close();
                     });
                 }
                 return handleTopicEpochForExclusiveProducer(producer);
@@ -1151,13 +1151,14 @@ public abstract class AbstractTopic implements Topic, TopicPolicyListener {
 
     private CompletableFuture<Void> tryOverwriteOldProducer(Producer oldProducer, Producer newProducer) {
         if (newProducer.isSuccessorTo(oldProducer)) {
-            oldProducer.close(false);
             if (!producers.replace(newProducer.getProducerName(), oldProducer, newProducer)) {
                 // Met concurrent update, throw exception here so that client can try reconnect later.
                 return CompletableFuture.failedFuture(new BrokerServiceException.NamingException("Producer with name '"
                         + newProducer.getProducerName() + "' replace concurrency error"));
             } else {
                 handleProducerRemoved(oldProducer);
+                // the old producer is no longer mapped, so closing it doesn't remove the new one
+                oldProducer.close();
                 return CompletableFuture.completedFuture(null);
             }
         } else {

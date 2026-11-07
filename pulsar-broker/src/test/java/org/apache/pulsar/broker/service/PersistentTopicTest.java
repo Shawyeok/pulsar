@@ -2471,7 +2471,7 @@ public class PersistentTopicTest extends MockedBookKeeperTestCase {
         Producer producer1 = new Producer(topic, serverCnx, 1 /* producer id */, "prod-name",
                 role, false, null, SchemaVersion.Latest, 0, true,
                 ProducerAccessMode.Shared, Optional.empty(), true);
-        producer1.close(false).get();
+        producer1.close().get();
         ByteBuf headersAndPayload = Unpooled.wrappedBuffer("test".getBytes());
         producer1.publishTxnMessage(
                 new TxnID(1L, 0L),

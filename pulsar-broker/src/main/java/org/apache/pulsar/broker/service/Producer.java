@@ -88,8 +88,6 @@ public class Producer {
             .newUpdater(Producer.class, "pendingPublishAcks");
 
     private volatile boolean isClosed = false;
-    private boolean removeFromTopicOnClose;
-    private boolean cleanupStarted;
     private final CompletableFuture<Void> closeFuture;
 
     private final PublisherStatsImpl stats;
@@ -408,7 +406,7 @@ public class Producer {
                 shouldCloseNow = isClosed && !closeFuture.isDone();
             }
             if (shouldCloseNow) {
-                closeNow(true);
+                closeNow();
             }
         }
     }
@@ -790,14 +788,13 @@ public class Producer {
      *
      * @return completable future indicate completion of close
      */
-    public CompletableFuture<Void> close(boolean removeFromTopic) {
+    public CompletableFuture<Void> close() {
         boolean shouldCloseNow = false;
         synchronized (this) {
             log.debug().attr("isClosed", isClosed).log("Closing producer");
 
             if (!isClosed) {
                 isClosed = true;
-                removeFromTopicOnClose = removeFromTopic;
                 log.debug()
                         .attr("isActive", cnx.isActive())
                         .attr("pendingPublishAcks", pendingPublishAcks)
@@ -807,24 +804,13 @@ public class Producer {
         }
         // closeNow acquires the topic lock, so it must not be called with the monitor held
         if (shouldCloseNow) {
-            closeNow(removeFromTopic);
+            closeNow();
         }
         return closeFuture;
     }
 
-    public void closeNow(boolean removeFromTopic) {
-        boolean removeProducer;
-        synchronized (this) {
-            if (cleanupStarted) {
-                return;
-            }
-            cleanupStarted = true;
-            // The first close request decides: close(false) keeps the producer on the topic for its replacement
-            removeProducer = isClosed ? removeFromTopicOnClose : removeFromTopic;
-        }
-        if (removeProducer) {
-            topic.removeProducer(this);
-        }
+    public void closeNow() {
+        topic.removeProducer(this);
         cnx.removedProducer(this);
 
         log.debug("Removed producer");
@@ -849,7 +835,7 @@ public class Producer {
                     .log("Disconnecting producer");
             cnx.execute(() -> {
                 cnx.closeProducer(this, assignedBrokerLookupData);
-                closeNow(true);
+                closeNow();
             });
         }
         return closeFuture;

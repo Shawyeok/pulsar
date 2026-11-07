@@ -508,7 +508,7 @@ public class ExclusiveProducerTest extends SharedPulsarBaseTest {
         @Cleanup("shutdownNow")
         ExecutorService fencingThread = Executors.newSingleThreadExecutor();
         CompletableFuture<CompletableFuture<Void>> closing = new CompletableFuture<>();
-        Thread closingThread = new Thread(() -> closing.complete(brokerP1.close(true)), "test-closing-producer");
+        Thread closingThread = new Thread(() -> closing.complete(brokerP1.close()), "test-closing-producer");
         closingThread.setDaemon(true);
 
         // The test thread holds the topic lock, so that a regression fails the timed get instead of leaving a real
@@ -518,7 +518,7 @@ public class ExclusiveProducerTest extends SharedPulsarBaseTest {
             closingThread.start();
             Awaitility.await().until(() -> brokerTopic.lock.hasQueuedThread(closingThread));
             // What AbstractTopic#incrementTopicEpochIfNeeded does when fencing out p1 with the topic lock held
-            fencingThread.submit(() -> brokerP1.close(true)).get(5, TimeUnit.SECONDS);
+            fencingThread.submit(() -> brokerP1.close()).get(5, TimeUnit.SECONDS);
         } finally {
             brokerTopic.lock.writeLock().unlock();
         }

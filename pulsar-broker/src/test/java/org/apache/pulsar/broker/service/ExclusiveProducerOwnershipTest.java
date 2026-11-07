@@ -241,33 +241,37 @@ public class ExclusiveProducerOwnershipTest extends SharedPulsarBaseTest {
     }
 
     @Test
-    public void testLastPublishCompletionKeepsProducerClosedWithoutRemoval() throws Exception {
+    public void testLastPublishCompletionOfReplacedProducerKeepsSuccessor() throws Exception {
         AbstractTopic topic = spyTopic();
-        Producer producer = realProducer(topic);
-        add(topic, producer).get(10, TimeUnit.SECONDS);
-        Topic.PublishContext publish = publishOneMessage(topic, producer);
+        long usageCount = topic.currentUsageCount();
+        ServerCnx cnx = mockCnx();
+        Producer oldProducer = realProducer(topic, cnx, 0);
+        add(topic, oldProducer).get(10, TimeUnit.SECONDS);
+        Topic.PublishContext publish = publishOneMessage(topic, oldProducer);
 
-        CompletableFuture<Void> closed = producer.close(false);
-        assertFalse(closed.isDone());
+        Producer newProducer = realProducer(topic, cnx, 1);
+        add(topic, newProducer).get(10, TimeUnit.SECONDS);
+        assertFalse(oldProducer.close().isDone());
         publish.completed(null, 1L, 1L);
 
-        assertTrue(closed.isDone());
-        assertEquals(topic.getProducers().get(producer.getProducerName()), producer);
-        topic.removeProducer(producer);
+        assertTrue(oldProducer.close().isDone());
+        assertEquals(topic.getProducers().get(newProducer.getProducerName()), newProducer);
+        assertEquals(topic.currentUsageCount(), usageCount + 1);
+        topic.removeProducer(newProducer);
     }
 
     @Test
     public void testForcedCloseDoesNotWaitForPendingPublishAcks() throws Exception {
         AbstractTopic topic = spyTopic();
         long usageCount = topic.currentUsageCount();
-        Producer producer = realProducer(topic);
+        Producer producer = realProducer(topic, mockCnx(), 0);
         add(topic, producer).get(10, TimeUnit.SECONDS);
         Topic.PublishContext publish = publishOneMessage(topic, producer);
 
-        producer.closeNow(true);
+        producer.closeNow();
 
         assertNull(topic.getProducers().get(producer.getProducerName()));
-        assertTrue(producer.close(true).isDone());
+        assertTrue(producer.close().isDone());
         publish.completed(null, 1L, 1L);
         assertEquals(topic.currentUsageCount(), usageCount);
     }
@@ -294,7 +298,7 @@ public class ExclusiveProducerOwnershipTest extends SharedPulsarBaseTest {
         return producer;
     }
 
-    private Producer realProducer(AbstractTopic topic) {
+    private ServerCnx mockCnx() {
         ServerCnx cnx = mock(ServerCnx.class);
         when(cnx.getBrokerService()).thenReturn(getPulsar().getBrokerService());
         when(cnx.clientSourceAddressAndPort()).thenReturn("127.0.0.1:1");
@@ -306,7 +310,11 @@ public class ExclusiveProducerOwnershipTest extends SharedPulsarBaseTest {
             invocation.<Runnable>getArgument(0).run();
             return null;
         }).when(cnx).execute(any(Runnable.class));
-        return new Producer(topic, cnx, 1, "real-producer", "role", false, null, SchemaVersion.Latest, 0, true,
+        return cnx;
+    }
+
+    private Producer realProducer(AbstractTopic topic, ServerCnx cnx, long epoch) {
+        return new Producer(topic, cnx, 1, "real-producer", "role", false, null, SchemaVersion.Latest, epoch, true,
                 ProducerAccessMode.Shared, Optional.empty(), true);
     }
 

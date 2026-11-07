@@ -479,7 +479,7 @@ public class ServerCnx extends PulsarHandler implements TransportCnx {
             }
             if (producerFuture.isDone() && !producerFuture.isCompletedExceptionally()) {
                 Producer producer = producerFuture.getNow(null);
-                producer.closeNow(true);
+                producer.closeNow();
                 if (brokerInterceptor != null) {
                     brokerInterceptor.producerClosed(this, producer, producer.getMetadata());
                 }
@@ -2645,7 +2645,7 @@ public class ServerCnx extends PulsarHandler implements TransportCnx {
                         .exceptionMessage(ex.getCause())
                         .log("failed producer because migration url not configured topic: producerId");
             }
-            producer.closeNow(true);
+            producer.closeNow();
             if (producerFuture.completeExceptionally(ex)) {
                 commandSender.sendErrorResponse(requestId,
                         BrokerServiceException.getClientErrorCode(ex), ex.getMessage());
@@ -3001,13 +3001,13 @@ public class ServerCnx extends PulsarHandler implements TransportCnx {
                 } else {
                     // The producer's future was completed before by
                     // a close command
-                    producer.closeNow(true);
+                    producer.closeNow();
                     log.info()
                             .attr("producer", producer)
                             .log("Cleared producer created after" + "timeout on client side");
                 }
             } else {
-                producer.closeNow(true);
+                producer.closeNow();
                 log.info()
                         .attr("producer", producer)
                         .log("Cleared producer created after connection was closed");
@@ -3039,7 +3039,7 @@ public class ServerCnx extends PulsarHandler implements TransportCnx {
                         .log("Failed to add producer to topic: producerId");
             }
 
-            producer.closeNow(true);
+            producer.closeNow();
             if (producerFuture.completeExceptionally(ex)) {
                 commandSender.sendErrorResponse(requestId,
                         BrokerServiceException.getClientErrorCode(ex), ex.getMessage());
@@ -3420,7 +3420,7 @@ public class ServerCnx extends PulsarHandler implements TransportCnx {
                 .attr("producerId", producerId)
                 .log("Closing producer on cnx. producerId");
 
-        producer.close(true).thenAcceptAsync(v -> {
+        producer.close().thenAcceptAsync(v -> {
             log.info()
                     .attr("topic", producer.getTopic())
                     .attr("producerName", producer.getProducerName())
